@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">BlindGuide</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_configuracao">ConfiguracaoActivity</string>
+    <string name="title_activity_rota">RotaActivity</string>
+
+<!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="title_activity_principal">Blind Guide</string>
+    <string name="title_activity_maintenance_rota">MaintenanceRotaActivity</string>
+    <string name="title_activity_navigation">NavigationActivity</string>
+</resources>

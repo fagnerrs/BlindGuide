@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="70dp"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_gravity="center_vertical"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Origem: "
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:id="@+id/rotasadapterview_TvOrigem" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Destino: "
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:id="@+id/rotasadapterview_TvDestino" />
+
+    </LinearLayout>
+
+    <ImageButton
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:src="@drawable/change"
+        android:background="#00FFFFFF"
+        android:id="@+id/rotasadapterview_BtnAlterar"/>
+
+    <ImageButton
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_marginLeft="6dp"
+        android:background="#00FFFFFF"
+        android:src="@drawable/remove"
+        android:id="@+id/rotasadapterview_BtnRemover"/>
+
+</LinearLayout>

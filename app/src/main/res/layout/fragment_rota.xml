@@ -1,0 +1,34 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent" tools:context="tcc.fragments.RotaFragment"
+    android:orientation="vertical">
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Adicionar Rota"
+        android:background="#FFFFFFFF"
+        android:id="@+id/configuration_btnAddRota" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        android:text="Rotas Cadastradas"
+        android:id="@+id/configuration_tvRotas"
+        android:textSize="16dp"
+        android:textStyle="bold"/>
+
+    <ListView
+        android:choiceMode="singleChoice"
+        android:listSelector="#666666"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:divider="#ECECEC"
+        android:dividerHeight="1sp"
+        android:scrollbars="vertical"
+        android:layout_marginRight="2dp"
+        android:id="@+id/configuration_listviewRotas" />
+
+</LinearLayout>
