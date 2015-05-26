@@ -1,6 +1,0 @@
-int drawable compass_icon 0x7f020000
-int drawable icon 0x7f020001
-int id compass 0x7f050001
-int id text 0x7f050000
-int layout main 0x7f030000
-int string app_name 0x7f040000
