@@ -7,10 +7,11 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/logo_blind"
         android:label="@string/app_name"
         android:theme="@android:style/Theme.Holo.Light" >
         <activity
@@ -36,7 +37,11 @@
         <activity
             android:name=".NavigationActivity"
             android:label="Navegação"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait" >
+        </activity>
+        <activity
+            android:name="tcc.compass.OrientationActivity"
+            android:label="@string/title_activity_orientation" >
         </activity>
     </application>
 

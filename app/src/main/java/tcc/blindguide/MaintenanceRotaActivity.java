@@ -1,82 +1,56 @@
 package tcc.blindguide;
 
 import android.app.ActionBar;
-import android.app.Activity;
-import android.content.Context;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
-import android.hardware.GeomagneticField;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.Bundle;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import tcc.adapters.ItemRotasAdapter;
 import tcc.compass.LowPassFilter;
+import tcc.compass.OrientationActivity;
+import tcc.dmlibrary.PlantaBaixaDM;
 import tcc.dmlibrary.RotaDM;
+import tcc.tolibrary.ItemRotaTO;
+import tcc.tolibrary.PlantaBaixa.AmbienteTO;
+import tcc.tolibrary.PlantaBaixa.PlantaBaixaTO;
 import tcc.tolibrary.RotaTO;
 
-public class MaintenanceRotaActivity extends Activity implements SensorEventListener, LocationListener {
+public class MaintenanceRotaActivity extends OrientationActivity {
 
     private ListView m_LisViewItemRotas;
     private RotaTO m_RotaTO = null;
     private ItemRotasAdapter m_Adapter;
     private TextView m_TextViewAngulo;
-    private Integer m_Angulo = 0;
-
-
-
-    private static final String TAG = "SensorsActivity";
-    private static final AtomicBoolean computing = new AtomicBoolean(false);
-
-    private static final int MIN_TIME = 30 * 1000;
-    private static final int MIN_DISTANCE = 10;
-
-    private static final float grav[] = new float[3]; // Gravity (a.k.a
-    // accelerometer data)
-    private static final float mag[] = new float[3]; // Magnetic
-    private static final float rotation[] = new float[9]; // Rotation matrix in
-    // Android format
-    private static final float orientation[] = new float[3]; // azimuth, pitch,
-    // roll
-    private static float smoothed[] = new float[3];
-
-    private static SensorManager sensorMgr = null;
-    private static List<Sensor> sensors = null;
-    private static Sensor sensorGrav = null;
-    private static Sensor sensorMag = null;
-
-    private static LocationManager locationMgr = null;
-    private static Location currentLocation = null;
-    private static GeomagneticField gmf = null;
-
-    private static double floatBearing = 0;
+    private float m_Angulo = 0;
     private EditText m_EditTextOrigem;
     private EditText m_EditTextDestino;
+    private Spinner m_SpinnerPlantaBaixa;
+    private ArrayList<AmbienteTO> m_Ambientes = null;
+    private long m_LastAmbiente;
+    private Spinner m_spinnerAmbiente;
+    private SpeechRecognizer sr;
+    private listener m_Listener;
 
-   /* public RotaFragment() {
-        m_RotaTO = new RotaTO();
-    }
-
-    public RotaFragment(RotaTO rotaTO)
-    {
-        m_RotaTO = rotaTO;
-    } */
+    private static final String TAG = "BlindGuida";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,6 +85,14 @@ public class MaintenanceRotaActivity extends Activity implements SensorEventList
 
         m_TextViewAngulo = (TextView)this.findViewById(R.id.rota_tvAngulo);
 
+        this.setmAtualizaOrientacao(new IAtualizaOrientacao() {
+            @Override
+            public void AtualizaOrientacao(float angulo) {
+                m_Angulo = angulo;
+                m_TextViewAngulo.setText(String.valueOf(m_Angulo));
+            }
+        });
+
         Button _btnAddPass = (Button)this.findViewById(R.id.rota_btnAddPasso);
         _btnAddPass.setOnClickListener(adicionarPassoClick());
 
@@ -123,10 +105,102 @@ public class MaintenanceRotaActivity extends Activity implements SensorEventList
         m_EditTextOrigem = (EditText)this.findViewById(R.id.rota_EdtNomeOrigem);
         m_EditTextDestino = (EditText)this.findViewById(R.id.rota_EdtNomeDestino);
 
+        m_SpinnerPlantaBaixa = (Spinner)this.findViewById(R.id.rota_SpinnerPlantasBaixas);
+        m_SpinnerPlantaBaixa.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+
+                PlantaBaixaTO _selectedPlantaBaixa =   (PlantaBaixaTO) parent.getItemAtPosition(position);
+
+                ArrayAdapter<AmbienteTO> _adapter = new ArrayAdapter<AmbienteTO>(MaintenanceRotaActivity.this, android.R.layout.simple_spinner_item, _selectedPlantaBaixa.getAmbientes());
+
+                m_spinnerAmbiente.setAdapter(_adapter);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        m_spinnerAmbiente = (Spinner)this.findViewById(R.id.rota_spinnerAmbiente);
+        m_spinnerAmbiente.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                AmbienteTO _selectedAmbiente = (AmbienteTO) parent.getItemAtPosition(position);
+                m_LastAmbiente = _selectedAmbiente.getID();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
         m_EditTextOrigem.setText(m_RotaTO.getNomeOrigem());
         m_EditTextDestino.setText(m_RotaTO.getNomeDestino());
 
-        startCompass();
+        sr = SpeechRecognizer.createSpeechRecognizer(this);
+
+        m_Listener = new listener();
+        m_Listener.setListenerVoz(new IListenerVoz() {
+            @Override
+            public void StartListening(String valor) {
+            iniciaGravacaoPassos();
+
+            if (valor.equals("pa")){
+
+                ItemRotaTO _itemRota = new ItemRotaTO();
+                _itemRota.setAngulo((int)m_Angulo);
+                _itemRota.setAmbiente(new AmbienteTO(m_LastAmbiente));
+
+                m_RotaTO.AddItemRota(_itemRota);
+                m_LisViewItemRotas.setAdapter(m_Adapter);
+            }
+            }
+        });
+
+        sr.setRecognitionListener(m_Listener);
+
+        loadPlantasBaixas();
+    }
+
+    private void loadAlertAmbiente(final ItemRotaTO itemRota, final DialogInterface.OnClickListener click)
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        // Add the buttons
+        builder.setPositiveButton("Confirmar", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+               click.onClick(dialog, id);
+            }
+        });
+        builder.setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User cancelled the dialog
+            }
+        });
+
+        View _view = this.getLayoutInflater().inflate(R.layout.maintenance_rota_dialog, null, false);
+
+
+        builder.setView(_view);
+
+        // Create the AlertDialog
+        AlertDialog dialog = builder.create();
+        dialog.setCanceledOnTouchOutside(false);
+        dialog.show();
+
+    }
+
+    private void loadPlantasBaixas(){
+
+        ArrayList<PlantaBaixaTO> _plantasBaixas = new PlantaBaixaDM(this).BuscaPlantasBaixas();
+
+        ArrayAdapter<PlantaBaixaTO> _adapter = new ArrayAdapter<PlantaBaixaTO>(this, android.R.layout.simple_spinner_item, _plantasBaixas);
+
+        m_SpinnerPlantaBaixa.setAdapter(_adapter);
+
     }
 
     private View.OnClickListener removerPassoClick() {
@@ -176,21 +250,33 @@ public class MaintenanceRotaActivity extends Activity implements SensorEventList
     }
 
     private View.OnClickListener adicionarPassoClick() {
+
         return new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                m_RotaTO.AddItemRota(m_Angulo);
+                //iniciaGravacaoPassos();
+
+                ItemRotaTO _itemRota = new ItemRotaTO();
+                _itemRota.setAngulo((int)m_Angulo);
+                _itemRota.setAmbiente(new AmbienteTO(m_LastAmbiente));
+
+                m_RotaTO.AddItemRota(_itemRota);
                 m_LisViewItemRotas.setAdapter(m_Adapter);
             }
         };
     }
 
-    @Override
-    public void onPause() {
-        super.onPause();
+    private void iniciaGravacaoPassos()
+    {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,"voice.recognition.test");
 
-        stopCompass();
+        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,5);
+        sr.startListening(intent);
+
+        Log.i("111111","11111111");
     }
 
     @Override
@@ -200,195 +286,10 @@ public class MaintenanceRotaActivity extends Activity implements SensorEventList
         Intent intent = new Intent("android.intent.CLOSE_ROTA_ACTIVITY");
         //PendingIntent pIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
         this.sendBroadcast(intent);
+
+        sr.destroy();
     }
 
-    public void startCompass() {
-
-        try {
-            sensorMgr = (SensorManager)this.getSystemService(this.SENSOR_SERVICE);
-
-            sensors = sensorMgr.getSensorList(Sensor.TYPE_ACCELEROMETER);
-            if (sensors.size() > 0)
-                sensorGrav = sensors.get(0);
-
-            sensors = sensorMgr.getSensorList(Sensor.TYPE_MAGNETIC_FIELD);
-            if (sensors.size() > 0)
-                sensorMag = sensors.get(0);
-
-            sensorMgr.registerListener(this, sensorGrav, SensorManager.SENSOR_DELAY_NORMAL);
-            sensorMgr.registerListener(this, sensorMag, SensorManager.SENSOR_DELAY_NORMAL);
-
-            locationMgr = (LocationManager)this.getSystemService(Context.LOCATION_SERVICE);
-            locationMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME, MIN_DISTANCE, this);
-
-            try {
-                /* defaulting to our place */
-                Location hardFix = new Location("ATL");
-                hardFix.setLatitude(39.931261);
-                hardFix.setLongitude(-75.051267);
-                hardFix.setAltitude(1);
-
-                try {
-                    Location gps = locationMgr.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                    Location network = locationMgr.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                    if (gps != null)
-                    {
-                        currentLocation = (gps);
-                    }
-                    else
-                    {
-                        if (network != null) {
-                            currentLocation = (network);
-                        } else {
-                            currentLocation = (hardFix);
-                        }
-                    }
-                } catch (Exception ex2) {
-                    currentLocation = (hardFix);
-                }
-                onLocationChanged(currentLocation);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        } catch (Exception ex1) {
-            try {
-                if (sensorMgr != null) {
-                    sensorMgr.unregisterListener(this, sensorGrav);
-                    sensorMgr.unregisterListener(this, sensorMag);
-                    sensorMgr = null;
-                }
-                if (locationMgr != null) {
-                    locationMgr.removeUpdates(this);
-                    locationMgr = null;
-                }
-            } catch (Exception ex2) {
-                ex2.printStackTrace();
-            }
-        }
-    }
-
-    public void stopCompass() {
-
-        try {
-            try {
-                sensorMgr.unregisterListener(this, sensorGrav);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-            try {
-                sensorMgr.unregisterListener(this, sensorMag);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-            sensorMgr = null;
-
-            try {
-                locationMgr.removeUpdates(this);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-            locationMgr = null;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-
-
-    private void updateText(double bearing) {
-        int range = (int) (bearing / (360f / 16f));
-        String dirTxt = "";
-
-        if (range == 15 || range == 0) dirTxt = "N";
-        else if (range == 1 || range == 2) dirTxt = "NE";
-        else if (range == 3 || range == 4) dirTxt = "E";
-        else if (range == 5 || range == 6) dirTxt = "SE";
-        else if (range == 7 || range == 8) dirTxt = "S";
-        else if (range == 9 || range == 10) dirTxt = "SW";
-        else if (range == 11 || range == 12) dirTxt = "W";
-        else if (range == 13 || range == 14) dirTxt = "NW";
-
-        m_Angulo = (int) bearing;
-        m_TextViewAngulo.setText("" + (m_Angulo) + ((char) 176) + " " + dirTxt);
-    }
-
-
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (!computing.compareAndSet(false, true)) return;
-
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            smoothed = LowPassFilter.filter(event.values, grav);
-            grav[0] = smoothed[0];
-            grav[1] = smoothed[1];
-            grav[2] = smoothed[2];
-        } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-            smoothed = LowPassFilter.filter(event.values, mag);
-            mag[0] = smoothed[0];
-            mag[1] = smoothed[1];
-            mag[2] = smoothed[2];
-        }
-
-        // Get rotation matrix given the gravity and geomagnetic matrices
-        SensorManager.getRotationMatrix(rotation, null, grav, mag);
-        SensorManager.getOrientation(rotation, orientation);
-        floatBearing = orientation[0];
-
-        // Convert from radians to degrees
-        floatBearing = Math.toDegrees(floatBearing); // degrees east of true
-        // north (180 to -180)
-
-        // Compensate for the difference between true north and magnetic north
-        if (gmf != null)
-            floatBearing += gmf.getDeclination();
-
-        // adjust to 0-360
-        if (floatBearing < 0)
-            floatBearing += 360;
-
-        //GlobalData.setBearing((int) floatBearing);
-
-        computing.set(false);
-
-        updateText(floatBearing);
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        if (sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD && accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
-            Log.w(TAG, "Compass data unreliable");
-        }
-    }
-
-    @Override
-    public void onLocationChanged(Location location) {
-        if (location == null) throw new NullPointerException();
-        currentLocation = (location);
-        gmf = new GeomagneticField((float) currentLocation.getLatitude(), (float) currentLocation.getLongitude(), (float) currentLocation.getAltitude(),
-                System.currentTimeMillis());
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-       // getMenuInflater().inflate(R.menu.menu_maintenance_rota, menu);
-
-        return true;
-    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -404,9 +305,78 @@ public class MaintenanceRotaActivity extends Activity implements SensorEventList
         else
         {
             onBackPressed();
-
         }
 
         return super.onOptionsItemSelected(item);
     }
+
+    class listener implements RecognitionListener
+    {
+        private IListenerVoz ListenerVoz;
+
+        public void onReadyForSpeech(Bundle params)
+        {
+            Log.d(TAG, "onReadyForSpeech");
+        }
+        public void onBeginningOfSpeech()
+        {
+            Log.d(TAG, "onBeginningOfSpeech");
+        }
+        public void onRmsChanged(float rmsdB)
+        {
+            Log.d(TAG, "onRmsChanged");
+        }
+        public void onBufferReceived(byte[] buffer)
+        {
+            Log.d(TAG, "onBufferReceived");
+        }
+        public void onEndOfSpeech()
+        {
+            Log.d(TAG, "onEndofSpeech");
+        }
+        public void onError(int error)
+        {
+            Log.d(TAG,  "error " +  error);
+            Log.i("BlindGuide", "error " + error);
+        }
+        public void onResults(Bundle results)
+        {
+            String str = new String();
+            Log.d(TAG, "onResults " + results);
+            ArrayList data = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+
+            String _valor = "";
+            if (data != null && data.size() > 0){
+                _valor = data.get(0).toString();
+            }
+
+
+           if (this.ListenerVoz != null){
+                this.ListenerVoz.StartListening(_valor);
+            }
+
+        }
+        public void onPartialResults(Bundle partialResults)
+        {
+            Log.d(TAG, "onPartialResults");
+        }
+        public void onEvent(int eventType, Bundle params)
+        {
+            Log.d(TAG, "onEvent " + eventType);
+        }
+
+        public IListenerVoz getListenerVoz() {
+            return ListenerVoz;
+        }
+
+        public void setListenerVoz(IListenerVoz listenerVoz) {
+            ListenerVoz = listenerVoz;
+        }
+    }
+
+    interface IListenerVoz
+    {
+        void StartListening(String valor);
+    }
+
 }

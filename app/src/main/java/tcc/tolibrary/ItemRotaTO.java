@@ -1,5 +1,7 @@
 package tcc.tolibrary;
 
+import tcc.tolibrary.PlantaBaixa.AmbienteTO;
+
 /**
  * Created by FAGNER on 28/03/2015.
  */
@@ -8,6 +10,7 @@ public class ItemRotaTO {
     private long RotaID;
     private Integer Passo;
     private Integer Angulo;
+    private AmbienteTO Ambiente;
 
     public long getId() {
         return Id;
@@ -39,5 +42,13 @@ public class ItemRotaTO {
 
     public void setAngulo(Integer angulo) {
         Angulo = angulo;
+    }
+
+    public AmbienteTO getAmbiente() {
+        return Ambiente;
+    }
+
+    public void setAmbiente(AmbienteTO ambiente) {
+        Ambiente = ambiente;
     }
 }

@@ -33,6 +33,26 @@
         android:inputType="text"
         android:id="@+id/rota_EdtNomeDestino"/>
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Plantas Baixas"/>
+
+    <Spinner
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="text"
+        android:id="@+id/rota_SpinnerPlantasBaixas"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ambiente"/>
+
+    <Spinner
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/rota_spinnerAmbiente"/>
 
     <LinearLayout
         android:layout_width="match_parent"

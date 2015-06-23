@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import tcc.database.DataBaseEngine;
 import tcc.tolibrary.ConfiguracaoTO;
 import tcc.tolibrary.ItemRotaTO;
+import tcc.tolibrary.PlantaBaixa.AmbienteTO;
 import tcc.tolibrary.RotaTO;
 
 /**
@@ -64,6 +65,7 @@ public class RotaDM {
         _values.put("rota_id", rotaID);
         _values.put("passo", value.getPasso());
         _values.put("angulo", value.getAngulo());
+        _values.put("ambiente_id", value.getAmbiente().getID());
 
         m_DataBase = m_dbEngine.getWritableDatabase();
 
@@ -118,6 +120,7 @@ public class RotaDM {
 
 
         m_DataBase = m_dbEngine.getReadableDatabase();
+
 
         Cursor _cursorPedidos = m_DataBase.
                 rawQuery(_querySQL, null);
@@ -183,7 +186,8 @@ public class RotaDM {
                 append(" select id, ").
                 append(" rota_id, ").
                 append(" passo, ").
-                append(" angulo ").
+                append(" angulo, ").
+                append(" ambiente_id ").
                 append(" from item_rota ").
                 append(" where rota_id = ").append(rotaId).toString();
 
@@ -196,10 +200,12 @@ public class RotaDM {
         while (_cursorPedidos.moveToNext()) {
 
             ItemRotaTO _rota = new ItemRotaTO();
+
             _rota.setId(_cursorPedidos.getLong(0));
             _rota.setRotaID(_cursorPedidos.getLong(1));
             _rota.setPasso(_cursorPedidos.getInt(2));
             _rota.setAngulo(_cursorPedidos.getInt(3));
+            _rota.setAmbiente(new AmbienteTO(_cursorPedidos.getLong(4)));
 
             _resp.add(_rota);
         }

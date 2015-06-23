@@ -18,6 +18,7 @@ import java.io.IOException;
 
 import tcc.compass.CompassActivity;
 import tcc.compass.GlobalData;
+import tcc.compass.OrientationActivity;
 import tcc.dmlibrary.RotaDM;
 import tcc.rnapedometer.MediaPlayerManager;
 import tcc.rnapedometer.RNAMode;
@@ -25,12 +26,11 @@ import tcc.rnapedometer.RNAPedometerManager;
 import tcc.tolibrary.RotaTO;
 
 
-public class NavigationActivity extends CompassActivity  {
+public class NavigationActivity extends OrientationActivity {
 
     private RotaTO m_Rota = null;
 
-    private static final String TAG = "AndroidCompassActivity";
-    private static PowerManager.WakeLock wakeLock = null;
+    private static final String TAG = "BlindGuide";
 
     private static TextView m_TvAngulotext = null;
     private static TextView m_TvOrigem = null;
@@ -52,6 +52,14 @@ public class NavigationActivity extends CompassActivity  {
         m_TvDestino = (TextView)this.findViewById(R.id.activity_navigation_TvRotaDestino);
         m_TvPasso = (TextView)this.findViewById(R.id.activity_navigation_TvPasso);
 
+        this.setmAtualizaOrientacao(new IAtualizaOrientacao() {
+            @Override
+            public void AtualizaOrientacao(float angulo) {
+                GlobalData.setBearing(angulo);
+                m_TvAngulotext.setText(String.valueOf(angulo));
+            }
+        });
+
         // Set up action bar.
         final ActionBar actionBar = getActionBar();
 
@@ -69,26 +77,21 @@ public class NavigationActivity extends CompassActivity  {
 
             compassView = findViewById(R.id.activity_navigation_compassview);
 
-            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, "DoNotDimScreen");
-
             try {
-                m_PedometerManager = new RNAPedometerManager(this.getAssets().open("Aprendizado.json"));
+                    m_PedometerManager = new RNAPedometerManager(this.getAssets().open("Aprendizado.json"));
 
-                MediaPlayerManager.Inicialize(this);
+                    MediaPlayerManager.Inicialize(this);
 
-                m_PedometerManager.setModeOperation(RNAMode.Analysing);
+                    m_PedometerManager.setModeOperation(RNAMode.Analysing);
 
-                m_PedometerManager.setRNAStepRefresh(new RNAPedometerManager.IRNAStep() {
-                    @Override
-                    public void Step(final double number) {
-                        MediaPlayerManager.PlaySound(R.drawable.step_sound);
-                        m_TvPasso.setText(String.valueOf(m_PedometerManager.StepCounter()));
-                    }
-                });
-
-
-
+                    m_PedometerManager.setRNAStepRefresh(new RNAPedometerManager.IRNAStep() {
+                        @Override
+                        public void Step(final double number) {
+                            //MediaPlayerManager.PlaySound(R.drawable.step_sound);
+                            m_TvPasso.setText(String.valueOf(m_PedometerManager.StepCounter()));
+                            m_Rota.MonitorRota(NavigationActivity.this, (int)GlobalData.getBearing(), m_PedometerManager.StepCounter());
+                        }
+                    });
             } catch (IOException e) {
                 e.printStackTrace();
 
@@ -99,19 +102,10 @@ public class NavigationActivity extends CompassActivity  {
     }
 
 
-
-    @Override
-    public void onResume() {
-        super.onResume();
-
-        wakeLock.acquire();
-    }
-
     @Override
     public void onPause() {
         super.onPause();
 
-        wakeLock.release();
         m_PedometerManager.setModeOperation(RNAMode.Stop);
         m_PedometerManager.Reset();
     }
@@ -127,23 +121,6 @@ public class NavigationActivity extends CompassActivity  {
         if (evt.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
                 m_PedometerManager.ReceiveData(evt.values[0],evt.values[1],evt.values[2]);
         }
-
-        // Update the direction text
-        updateText(GlobalData.getBearing());
-    }
-
-    private static void updateText(float bearing) {
-        int range = (int) (bearing / (360f / 16f));
-        String dirTxt = "";
-        if (range == 15 || range == 0) dirTxt = "N";
-        else if (range == 1 || range == 2) dirTxt = "NE";
-        else if (range == 3 || range == 4) dirTxt = "E";
-        else if (range == 5 || range == 6) dirTxt = "SE";
-        else if (range == 7 || range == 8) dirTxt = "S";
-        else if (range == 9 || range == 10) dirTxt = "SW";
-        else if (range == 11 || range == 12) dirTxt = "W";
-        else if (range == 13 || range == 14) dirTxt = "NW";
-        m_TvAngulotext.setText("" + ((int) bearing) + ((char) 176) + " " + dirTxt);
     }
 
     @Override

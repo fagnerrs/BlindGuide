@@ -10,12 +10,10 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DataBaseEngine extends SQLiteOpenHelper
 {
     private static String m_DatabaseName = "blindguidebd.db";
-    private static int m_Version = 1;
+    private static int m_Version = 7;
 
     public DataBaseEngine(Context context) {
         super(context, m_DatabaseName, null, m_Version);
-
-
     }
 
     @Override
@@ -31,6 +29,18 @@ public class DataBaseEngine extends SQLiteOpenHelper
 
     public void createTables(SQLiteDatabase db)
     {
+
+        db.execSQL(new StringBuilder().append("create table planta_baixa")
+                .append(" ( id numeric, ")
+                .append("  descricao text ) ")
+                .toString());
+
+        db.execSQL(new StringBuilder().append("create table ambiente")
+                .append(" ( id numeric, ")
+                .append(" planta_baixa_id numeric, ")
+                .append("  descricao text ) ")
+                .toString());
+
 
         db.execSQL(new StringBuilder().append("create table configuracao")
                 .append(" ( passo_medio numeric ) ")
@@ -48,6 +58,7 @@ public class DataBaseEngine extends SQLiteOpenHelper
                 .append(" ( id numeric,  ")
                 .append(" rota_id numeric,  ")
                 .append(" passo integer, ")
+                .append(" ambiente_id numeric, ")
                 .append(" angulo numeric ) ")
                 .toString());
 
@@ -59,11 +70,27 @@ public class DataBaseEngine extends SQLiteOpenHelper
                 .append(" descricao text ) ")
                 .toString());
 
+        insertPlantaBaixa(db);
 
+    }
+
+    private void insertPlantaBaixa(SQLiteDatabase db)
+    {
+        db.execSQL(" insert into planta_baixa (id, descricao) values (1, 'Laboratório de Informática - UNISC')");
+        db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (1, 1, 'Entrada Principal')");
+        db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (2, 1, 'Laboratório 6')");
+        db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (3, 1, 'Laboratório 7')");
+        db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (3, 1, 'Laboratório 8')");
     }
 
     public void deleteTables(SQLiteDatabase db)
     {
+        db.execSQL(new StringBuilder().append(" drop table if exists planta_baixa ")
+                .toString());
+
+        db.execSQL(new StringBuilder().append(" drop table if exists ambiente ")
+                .toString());
+
         db.execSQL(new StringBuilder().append(" drop table if exists configuracao ")
                 .toString());
 
@@ -76,5 +103,7 @@ public class DataBaseEngine extends SQLiteOpenHelper
         db.execSQL(new StringBuilder().append(" drop table if exists ponto_interesse ")
                 .toString());
     }
+
+
 
 }
