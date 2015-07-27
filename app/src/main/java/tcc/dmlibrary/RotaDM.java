@@ -66,6 +66,7 @@ public class RotaDM {
         _values.put("passo", value.getPasso());
         _values.put("angulo", value.getAngulo());
         _values.put("ambiente_id", value.getAmbiente().getID());
+        _values.put("observacao", value.getObservacao());
 
         m_DataBase = m_dbEngine.getWritableDatabase();
 
@@ -183,12 +184,15 @@ public class RotaDM {
         ArrayList<ItemRotaTO> _resp = new ArrayList<>();
 
         String _querySQL = new StringBuilder().
-                append(" select id, ").
-                append(" rota_id, ").
-                append(" passo, ").
-                append(" angulo, ").
-                append(" ambiente_id ").
-                append(" from item_rota ").
+                append(" select item_rota.id, ").
+                append(" item_rota.rota_id, ").
+                append(" item_rota.passo, ").
+                append(" item_rota.angulo, ").
+                append(" item_rota.ambiente_id, ").
+                append(" ambiente.descricao, ").
+                append(" item_rota.observacao ").
+                append(" from item_rota join ambiente  ").
+                append(" on item_rota.ambiente_id = ambiente.id ").
                 append(" where rota_id = ").append(rotaId).toString();
 
 
@@ -205,7 +209,8 @@ public class RotaDM {
             _rota.setRotaID(_cursorPedidos.getLong(1));
             _rota.setPasso(_cursorPedidos.getInt(2));
             _rota.setAngulo(_cursorPedidos.getInt(3));
-            _rota.setAmbiente(new AmbienteTO(_cursorPedidos.getLong(4)));
+            _rota.setAmbiente(new AmbienteTO(_cursorPedidos.getLong(4), _cursorPedidos.getString(5)));
+            _rota.setObservacao(_cursorPedidos.getString(6));
 
             _resp.add(_rota);
         }

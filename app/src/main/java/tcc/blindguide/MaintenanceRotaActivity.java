@@ -9,6 +9,7 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
@@ -83,18 +84,20 @@ public class MaintenanceRotaActivity extends OrientationActivity {
         m_Adapter = new ItemRotasAdapter(this, m_RotaTO.getItensRota());
         m_LisViewItemRotas.setAdapter(m_Adapter);
 
-        m_TextViewAngulo = (TextView)this.findViewById(R.id.rota_tvAngulo);
+        //m_TextViewAngulo = (TextView)this.findViewById(R.id.rota_tvAngulo);
 
         this.setmAtualizaOrientacao(new IAtualizaOrientacao() {
             @Override
             public void AtualizaOrientacao(float angulo) {
                 m_Angulo = angulo;
-                m_TextViewAngulo.setText(String.valueOf(m_Angulo));
+
+                //m_TextViewAngulo.setText(String.valueOf(m_Angulo));
             }
         });
 
         Button _btnAddPass = (Button)this.findViewById(R.id.rota_btnAddPasso);
         _btnAddPass.setOnClickListener(adicionarPassoClick());
+        _btnAddPass.setOnLongClickListener(adicionarPassoObservacao());
 
         Button _btnRemPass = (Button)this.findViewById(R.id.rota_btnRemPasso);
         _btnRemPass.setOnClickListener(removerPassoClick());
@@ -163,6 +166,47 @@ public class MaintenanceRotaActivity extends OrientationActivity {
         sr.setRecognitionListener(m_Listener);
 
         loadPlantasBaixas();
+    }
+
+    private View.OnLongClickListener adicionarPassoObservacao() {
+
+        return new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+
+                final ItemRotaTO _itemRota = new ItemRotaTO();
+
+                AlertDialog _alert = null;
+                AlertDialog.Builder _builder = new AlertDialog.Builder(MaintenanceRotaActivity.this);
+
+                View _viewNotes = LayoutInflater.from(MaintenanceRotaActivity.this).inflate(R.layout.dialog_observacao_passo, null);
+                final EditText _edtNotes = (EditText) _viewNotes.findViewById(R.id.edt_observacao);
+
+                _edtNotes.setText(_itemRota.getObservacao());
+
+                final int _angle = (int) m_Angulo;
+
+                _builder.setTitle("Observações");
+                _builder.setView(_viewNotes);
+                _builder.setPositiveButton("Salvar", new android.content.DialogInterface.OnClickListener()
+                {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which)
+                    {
+
+                        _itemRota.setObservacao(_edtNotes.getText().toString());
+                        adicionarPasso(_itemRota, _angle);
+                    }
+                });
+
+                _builder.setNegativeButton("Cancelar", null);
+
+                _alert = _builder.create();
+                _alert.show();
+
+                return false;
+            }
+        };
     }
 
     private void loadAlertAmbiente(final ItemRotaTO itemRota, final DialogInterface.OnClickListener click)
@@ -250,21 +294,43 @@ public class MaintenanceRotaActivity extends OrientationActivity {
     }
 
     private View.OnClickListener adicionarPassoClick() {
-
         return new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                //iniciaGravacaoPassos();
-
-                ItemRotaTO _itemRota = new ItemRotaTO();
-                _itemRota.setAngulo((int)m_Angulo);
-                _itemRota.setAmbiente(new AmbienteTO(m_LastAmbiente));
-
-                m_RotaTO.AddItemRota(_itemRota);
-                m_LisViewItemRotas.setAdapter(m_Adapter);
+                adicionarPasso();
             }
         };
+    }
+
+    private void adicionarPasso()
+    {
+        adicionarPasso(new ItemRotaTO());
+    }
+
+    private void adicionarPasso(ItemRotaTO itemRota)
+    {
+        if (itemRota == null)
+            itemRota = new ItemRotaTO();
+
+        itemRota.setAngulo((int)m_Angulo);
+        itemRota.setAmbiente(new AmbienteTO(m_LastAmbiente));
+
+        m_RotaTO.AddItemRota(itemRota);
+
+        m_LisViewItemRotas.setAdapter(m_Adapter);
+    }
+
+    private void adicionarPasso(ItemRotaTO itemRota, Integer angulo)
+    {
+        if (itemRota == null)
+            itemRota = new ItemRotaTO();
+
+        itemRota.setAngulo(angulo);
+        itemRota.setAmbiente(new AmbienteTO(m_LastAmbiente));
+
+        m_RotaTO.AddItemRota(itemRota);
+
+        m_LisViewItemRotas.setAdapter(m_Adapter);
     }
 
     private void iniciaGravacaoPassos()

@@ -31,6 +31,7 @@ public class RotaFragment extends Fragment {
     private ArrayList<RotaTO> m_RotasTO;
     private ListView m_listViewRotas;
     private TextView _tvRota;
+    private BroadcastReceiver mReceiver;
 
     public RotaFragment() {
         // Required empty public constructor
@@ -40,7 +41,7 @@ public class RotaFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        mReceiver = new BroadcastReceiver() {
 
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -52,6 +53,17 @@ public class RotaFragment extends Fragment {
         IntentFilter filter = new IntentFilter("android.intent.CLOSE_ROTA_ACTIVITY");
         this.getActivity().registerReceiver(mReceiver, filter);
     }
+
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        if (mReceiver != null) {
+            this.getActivity().unregisterReceiver(mReceiver);
+        }
+    }
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,

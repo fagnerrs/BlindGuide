@@ -10,7 +10,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DataBaseEngine extends SQLiteOpenHelper
 {
     private static String m_DatabaseName = "blindguidebd.db";
-    private static int m_Version = 7;
+    private static int m_Version = 10;
 
     public DataBaseEngine(Context context) {
         super(context, m_DatabaseName, null, m_Version);
@@ -38,7 +38,8 @@ public class DataBaseEngine extends SQLiteOpenHelper
         db.execSQL(new StringBuilder().append("create table ambiente")
                 .append(" ( id numeric, ")
                 .append(" planta_baixa_id numeric, ")
-                .append("  descricao text ) ")
+                .append("  descricao text, ")
+                .append("  observacoes text ) ")
                 .toString());
 
 
@@ -59,7 +60,8 @@ public class DataBaseEngine extends SQLiteOpenHelper
                 .append(" rota_id numeric,  ")
                 .append(" passo integer, ")
                 .append(" ambiente_id numeric, ")
-                .append(" angulo numeric ) ")
+                .append(" angulo numeric,  ")
+                .append(" observacao text ) ")
                 .toString());
 
 
@@ -80,7 +82,15 @@ public class DataBaseEngine extends SQLiteOpenHelper
         db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (1, 1, 'Entrada Principal')");
         db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (2, 1, 'Laboratório 6')");
         db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (3, 1, 'Laboratório 7')");
-        db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (3, 1, 'Laboratório 8')");
+        db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (4, 1, 'Laboratório 8')");
+
+        db.execSQL(" insert into planta_baixa (id, descricao) values (2, 'Fagner - Casa')");
+        db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (5, 2, 'Sala')");
+        db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (6, 2, 'Quarto')");
+        db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (7, 2, 'Garagem')");
+        db.execSQL(" insert into ambiente (id, planta_baixa_id, descricao) values (8, 2, 'Lavanderia')");
+
+
     }
 
     public void deleteTables(SQLiteDatabase db)

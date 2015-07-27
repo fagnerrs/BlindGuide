@@ -44,16 +44,18 @@ public class ItemRotasAdapter extends BaseAdapter  {
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
+
         View _view = m_BaseInflater.inflate(R.layout.item_rotas_adapter_view, null);
         ItemRotaTO _rotaTO = m_BaseList.get(position);
 
         TextView _tvPasso = (TextView)_view.findViewById(R.id.itemrotasadapterview_TvPasso);
         TextView _tvAngulo = (TextView)_view.findViewById(R.id.itemrotasadapterview_TvAngulo);
-        TextView _tvPontoInteresse = (TextView)_view.findViewById(R.id.itemrotasadapterview_TvPontoInteresse);
+        TextView _tvObservacoes = (TextView)_view.findViewById(R.id.itemrotasadapterview_TvObservacoes);
 
         _tvPasso.setText(String.valueOf(_rotaTO.getPasso()));
         _tvAngulo.setText(String.valueOf(_rotaTO.getAngulo()));
-        _tvPontoInteresse.setText(String.valueOf(""));
+        _tvObservacoes.setText(_rotaTO.getObservacao());
+
         return _view;
     }
 }

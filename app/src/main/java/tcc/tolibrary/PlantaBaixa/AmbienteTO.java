@@ -13,6 +13,12 @@ public class AmbienteTO {
         this.setID(id);
     }
 
+    public AmbienteTO(long id, String descricao)
+    {
+        this.setID(id);
+        this.setDescricao(descricao);
+    }
+
     public String getDescricao() {
         return Descricao;
     }

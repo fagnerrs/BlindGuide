@@ -15,6 +15,8 @@ import android.view.View;
 import android.widget.TextView;
 
 import java.io.IOException;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import tcc.compass.CompassActivity;
 import tcc.compass.GlobalData;
@@ -23,6 +25,7 @@ import tcc.dmlibrary.RotaDM;
 import tcc.rnapedometer.MediaPlayerManager;
 import tcc.rnapedometer.RNAMode;
 import tcc.rnapedometer.RNAPedometerManager;
+import tcc.tolibrary.ItemRotaTO;
 import tcc.tolibrary.RotaTO;
 
 
@@ -36,11 +39,14 @@ public class NavigationActivity extends OrientationActivity {
     private static TextView m_TvOrigem = null;
     private static TextView m_TvDestino = null;
     private TextView m_TvPasso;
-
+    private TextView m_TvCurrentPlace;
     private static View compassView = null;
 
     private RNAPedometerManager m_PedometerManager = null;
-
+    private Timer m_TimerMonitor;
+    private Timer m_TimerPassosMonitor;
+    private Integer m_CurrentStep = 0;
+    private TextView m_TvAnguloRota;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,12 +57,43 @@ public class NavigationActivity extends OrientationActivity {
         m_TvOrigem = (TextView)this.findViewById(R.id.activity_navigation_TvRotaOrigem);
         m_TvDestino = (TextView)this.findViewById(R.id.activity_navigation_TvRotaDestino);
         m_TvPasso = (TextView)this.findViewById(R.id.activity_navigation_TvPasso);
+        m_TvCurrentPlace = (TextView)this.findViewById(R.id.activity_navigation_TvCurrentPlace);
+        m_TvAnguloRota = (TextView)this.findViewById(R.id.activity_navigation_TvAnguloRota);
+
+        m_TimerMonitor = new Timer();
+        m_TimerMonitor.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if (m_Rota != null)
+                    NavigationActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                           m_Rota.MonitorRota(NavigationActivity.this, (int) GlobalData.getBearing(), m_PedometerManager.StepCounter());
+                        }
+                    });
+            }
+        }, 5000, 8000);
+
+       /* m_TimerPassosMonitor = new Timer();
+        m_TimerPassosMonitor.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if (m_Rota != null)
+                    NavigationActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                           // m_Rota.RetornaPassosPorVoz(NavigationActivity.this, m_PedometerManager.StepCounter());
+                        }
+                    });
+            }
+        }, 10000, 10000); */
 
         this.setmAtualizaOrientacao(new IAtualizaOrientacao() {
             @Override
             public void AtualizaOrientacao(float angulo) {
-                GlobalData.setBearing(angulo);
-                m_TvAngulotext.setText(String.valueOf(angulo));
+
+            GlobalData.setBearing(angulo);
+            m_TvAngulotext.setText(String.valueOf(angulo));
             }
         });
 
@@ -72,26 +109,55 @@ public class NavigationActivity extends OrientationActivity {
 
             m_Rota = new RotaDM(this).BuscaRotaById(_id);
 
-            m_TvOrigem.setText("Origem: " + m_Rota.getNomeOrigem());
-            m_TvDestino.setText("Destino: " + m_Rota.getNomeDestino());
+            m_TvOrigem.setText(m_Rota.getNomeOrigem());
+            m_TvDestino.setText(m_Rota.getNomeDestino());
+            m_TvCurrentPlace.setText(m_Rota.getAmbiente(1).getAmbiente().getDescricao());
+            m_TvAnguloRota.setText(String.valueOf(m_Rota.getAmbiente(1).getAngulo()));
+            m_TvPasso.setText("0");
+            m_Rota.getMaxStep();
 
             compassView = findViewById(R.id.activity_navigation_compassview);
 
             try {
-                    m_PedometerManager = new RNAPedometerManager(this.getAssets().open("Aprendizado.json"));
+                m_PedometerManager = new RNAPedometerManager(this.getAssets().open("Aprendizado.json"));
 
-                    MediaPlayerManager.Inicialize(this);
+                MediaPlayerManager.Inicialize(this);
 
-                    m_PedometerManager.setModeOperation(RNAMode.Analysing);
+                m_PedometerManager.setModeOperation(RNAMode.Analysing);
 
-                    m_PedometerManager.setRNAStepRefresh(new RNAPedometerManager.IRNAStep() {
-                        @Override
-                        public void Step(final double number) {
-                            //MediaPlayerManager.PlaySound(R.drawable.step_sound);
-                            m_TvPasso.setText(String.valueOf(m_PedometerManager.StepCounter()));
-                            m_Rota.MonitorRota(NavigationActivity.this, (int)GlobalData.getBearing(), m_PedometerManager.StepCounter());
+                m_PedometerManager.setRNAStepRefresh(new RNAPedometerManager.IRNAStep() {
+                    @Override
+                    public void Step(final double number) {
+
+                        int _passo = m_PedometerManager.StepCounter();
+
+                        if (m_CurrentStep != _passo){
+
+                            m_TvPasso.setText(String.valueOf(_passo));
+
+                            if (m_CurrentStep <= m_Rota.getMaxStep()) {
+                                ItemRotaTO _itemRota = m_Rota.getAmbiente(_passo);
+
+                                m_TvCurrentPlace.setText(_itemRota.getAmbiente().getDescricao());
+                                m_TvAnguloRota.setText(String.valueOf(_itemRota.getAngulo()));
+
+                                m_CurrentStep = _passo;
+
+                                if (_itemRota.getObservacao() != null && !_itemRota.getObservacao().equals("")) {
+                                    m_Rota.Speak(NavigationActivity.this, _itemRota.getObservacao());
+                                }
+
+                                if (m_CurrentStep == m_Rota.getMaxStep()) {
+                                    m_Rota.Speak(NavigationActivity.this, "Fim da Rota!");
+                                }
+                            }
                         }
-                    });
+
+                    }
+                });
+
+
+
             } catch (IOException e) {
                 e.printStackTrace();
 
@@ -101,14 +167,26 @@ public class NavigationActivity extends OrientationActivity {
         }
     }
 
-
     @Override
-    public void onPause() {
-        super.onPause();
+    protected void onStop() {
+        try{
 
-        m_PedometerManager.setModeOperation(RNAMode.Stop);
-        m_PedometerManager.Reset();
+            super.onStop();
+
+
+            m_TimerMonitor.cancel();
+            m_TimerPassosMonitor.cancel();
+
+            m_PedometerManager.setModeOperation(RNAMode.Stop);
+            m_PedometerManager.Reset();
+
+
+        }
+        catch (Exception ex){
+            ex.printStackTrace();
+        }
     }
+
 
     @Override
     public void onSensorChanged(SensorEvent evt) {

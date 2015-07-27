@@ -11,6 +11,7 @@ public class ItemRotaTO {
     private Integer Passo;
     private Integer Angulo;
     private AmbienteTO Ambiente;
+    private String Observacao;
 
     public long getId() {
         return Id;
@@ -50,5 +51,13 @@ public class ItemRotaTO {
 
     public void setAmbiente(AmbienteTO ambiente) {
         Ambiente = ambiente;
+    }
+
+    public String getObservacao() {
+        return Observacao;
+    }
+
+    public void setObservacao(String observacao) {
+        Observacao = observacao;
     }
 }
